@@ -35,10 +35,7 @@ def aggegate_interval(strain, mouse, feature, bin_width):
     intervals = data.load_intervals(feature)
     inn = intervals.loc[intervals['strain'] == strain]
     innn = inn.loc[intervals['mouse'] == mouse]
-    a = 'recordingStartTimeEndTime_strain'
-    a = a + str(strain)
-    a = a + '_mouse'
-    a = a + str(mouse)
+    a = 'recordingStartTimeEndTime_strain' + str(strain) + '_mouse' + str(mouse)
     for i in os.listdir(path):
         if os.path.isfile(os.path.join(path, i)) and a in i:
             files.append(i)
@@ -47,36 +44,35 @@ def aggegate_interval(strain, mouse, feature, bin_width):
         pa = path + '/' + str(files[i])
         b = np.load(pa)
         start = b[0]
-        end = b[0] + 3600 * 24
         ini = innn.loc[innn['day'] == i]
         for j in range(int(le)):
             aa = ini.loc[((ini['start'] > start + j * bin_width * 60) &
-                (ini['start'] < start + (j + 1) * bin_width * 60)) |
-                ((ini['stop'] >start + j * bin_width *60) &
-                (ini['stop'] < start + (j + 1) * bin_width * 60))]
+                         (ini['start'] < start + (j + 1) * bin_width * 60)) |
+                         ((ini['stop'] > start + j * bin_width * 60) &
+                         (ini['stop'] < start + (j + 1) * bin_width * 60))]
             g = 0
-            gg = list(ini.iloc[:]['stop']-ini.iloc[:]['start'])
-            if len(aa)==0:
-                g=0
-            if len(aa)!=0:
-                if aa.iloc[0]['start']>=start+j*bin_width*60 and aa.iloc[len(aa)-1]['stop']<=start+(j+1)*bin_width*60:
+            gg = list(ini.iloc[:]['stop'] - ini.iloc[:]['start'])
+            if len(aa) == 0:
+                g = 0
+            if len(aa) != 0:
+                if aa.iloc[0]['start'] >= start + j * bin_width * 60 and aa.iloc[len(aa)-1]['stop']<=start+(j+1)*bin_width*60:
                     for k in range(len(aa)):
-                        g=g+gg[k]
+                        g = g + gg[k]
                 if aa.iloc[0]['start']<start+j*bin_width*60 and aa.iloc[len(aa)-1]['stop']<=start+(j+1)*bin_width*60:
                     for k in range(len(aa)-1):
-                        g=g+gg[k+1]
-                    g=g+aa.iloc[0]['stop']-start-j*bin_width*60
+                        g = g + gg[k + 1]
+                    g = g + aa.iloc[0]['stop'] - start - j * bin_width * 60
                 if aa.iloc[0]['start']>=start+j*bin_width*60 and aa.iloc[len(aa)-1]['stop']>start+(j+1)*bin_width*60:
-                    for k in range(len(aa)-1):
-                        g=g+gg[k]
+                    for k in range(len(aa) - 1):
+                        g = g + gg[k]
                     g=g+start+(j+1)*bin_width*60-aa.iloc[len(aa)-1]['start']
                 if aa.iloc[0]['start']<start+j*bin_width*60 and aa.iloc[len(aa)-1]['stop']>start+(j+1)*bin_width*60:
-                    for k in range(len(aa)-2):
-                        g=g+gg[k+1]
-                    g=g+aa.iloc[0]['stop']-start-j*bin_width*60
-                    g=g+start+(j+1)*bin_width*60-aa.iloc[len(aa)-1]['start']
+                    for k in range(len(aa) - 2):
+                        g = g + gg[k + 1]
+                    g = g + aa.iloc[0]['stop'] - start - j * bin_width * 60
+                    g = g + start + (j + 1) * bin_width * 60 - aa.iloc[len(aa) - 1]['start']
             tt.append(g)
-    tre=str(bin_width)+'min'
-    ts=pd.DataFrame(tt, index=pd.date_range('2014-01-01',periods=len(tt),freq=tre))
-    ts.columns=[feature]
+    tre = str(bin_width) + 'min'
+    ts = pd.DataFrame(tt, index = pd.date_range('2014-01-01', periods = len(tt), freq = tre))
+    ts.columns = [feature]
     return(ts)
