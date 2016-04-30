@@ -1,8 +1,11 @@
 from __future__ import print_function, absolute_import, division
+
 import numpy as np
 import pandas as pd
+
 import datetime
 import os
+
 import mousestyles.data as data
 
 
@@ -12,7 +15,8 @@ def aggegate_interval(strain, mouse, feature, bin_width):
 
     Parameters
     ---------------
-    feature: {"AS", "Food", "IS", "M_AS", "M_IS", "Water", "Distance", "AS_Intensity", "AS_prob"}
+    feature:{"AS", "Food", "IS", "M_AS", "M_IS",
+            "Water", "Distance", "AS_Intensity", "AS_prob"}
     bin_width: number of minutes of time interval for data aggregation
 
     Returns
@@ -20,43 +24,55 @@ def aggegate_interval(strain, mouse, feature, bin_width):
     ts: pandas.tseries
         a pandas time series of length 12(day)*24(hour)*60(minute)/n
     """
-    # load data
+    path = 'mousestyles/data/txy_coords/recordingStartTimeEndTime'
+    files = []
+    le = 24 * 60 / bin_width
+    tim = list()
+    a = datetime.datetime(100, 1, 1, 0, 0, 0)
+    for i in range(int(le)):
+        b = a + datetime.timedelta(0, i * bin_width * 60)
+    tim.append(b.time())
     intervals = data.load_intervals(feature)
-    mouse_data = intervals.loc[
-        (intervals['strain'] == strain) & (intervals['mouse'] == mouse)]
-
-    # build data frame
-    days = sorted(np.unique(mouse_data['day']))
-    bin_count = int(24 * 60 / bin_width)
-    time_behaviour = np.repeat(0.0, bin_count * len(days))
-    bin_length = bin_width * 60
-
-    for j in days:
-        df = mouse_data.loc[mouse_data['day'] == j]
-        start_end = data.load_start_time_end_time(strain, mouse, j)
-        start = np.asarray(df['start']) - start_end[0]
-        end = np.asarray(df['stop']) - start_end[0]
-
-        for i in range(len(start)):
-            start_time = start[i]
-            end_time = end[i]
-            start_index = int(start_time / (bin_width * 60))
-            end_index = int(end_time / (bin_width * 60))
-            if start_index == end_index:
-                time_behaviour[start_index + j *
-                               bin_count] += end_time - start_time
-            elif end_index - start_index == 1:
-                time_behaviour[start_index + j *
-                               bin_count] += bin_length * end_index - start_time
-                time_behaviour[end_index + j *
-                               bin_count] += end_time % bin_length
-            else:
-                time_behaviour[
-                    start_index + j * bin_count] += bin_length * (start_index + 1) - start_time
-                time_behaviour[end_index + j *
-                               bin_count] += end_time % bin_length
-                time_behaviour[start_index + j * bin_count +
-                               1:end_index + j * bin_count] += bin_length
-    ts = pd.Series(time_behaviour, index=pd.date_range(
-        '01/01/2014', periods=len(time_behaviour), freq=str(bin_width) + 'min'))
+    inn = intervals.loc[intervals['strain'] == strain]
+    innn = inn.loc[intervals['mouse'] == mouse]
+    a = 'recordingStartTimeEndTime_strain' + str(strain) + '_mouse' + str(mouse)
+    for i in os.listdir(path):
+        if os.path.isfile(os.path.join(path, i)) and a in i:
+            files.append(i)
+    tt = list()
+    for i in range(len(files)):
+        pa = path + '/' + str(files[i])
+        b = np.load(pa)
+        start = b[0]
+        ini = innn.loc[innn['day'] == i]
+        for j in range(int(le)):
+            aa = ini.loc[((ini['start'] > start + j * bin_width * 60) &
+                         (ini['start'] < start + (j + 1) * bin_width * 60)) |
+                         ((ini['stop'] > start + j * bin_width * 60) &
+                         (ini['stop'] < start + (j + 1) * bin_width * 60))]
+            g = 0
+            gg = list(ini.iloc[:]['stop'] - ini.iloc[:]['start'])
+            if len(aa) == 0:
+                g = 0
+            if len(aa) != 0:
+                if aa.iloc[0]['start'] >= start + j * bin_width * 60 and aa.iloc[len(aa)-1]['stop']<=start+(j+1)*bin_width*60:
+                    for k in range(len(aa)):
+                        g = g + gg[k]
+                if aa.iloc[0]['start']<start+j*bin_width*60 and aa.iloc[len(aa)-1]['stop']<=start+(j+1)*bin_width*60:
+                    for k in range(len(aa)-1):
+                        g = g + gg[k + 1]
+                    g = g + aa.iloc[0]['stop'] - start - j * bin_width * 60
+                if aa.iloc[0]['start']>=start+j*bin_width*60 and aa.iloc[len(aa)-1]['stop']>start+(j+1)*bin_width*60:
+                    for k in range(len(aa) - 1):
+                        g = g + gg[k]
+                    g=g+start+(j+1)*bin_width*60-aa.iloc[len(aa)-1]['start']
+                if aa.iloc[0]['start']<start+j*bin_width*60 and aa.iloc[len(aa)-1]['stop']>start+(j+1)*bin_width*60:
+                    for k in range(len(aa) - 2):
+                        g = g + gg[k + 1]
+                    g = g + aa.iloc[0]['stop'] - start - j * bin_width * 60
+                    g = g + start + (j + 1) * bin_width * 60 - aa.iloc[len(aa) - 1]['start']
+            tt.append(g)
+    tre = str(bin_width) + 'min'
+    ts = pd.DataFrame(tt, index = pd.date_range('2014-01-01', periods = len(tt), freq = tre))
+    ts.columns = [feature]
     return(ts)
