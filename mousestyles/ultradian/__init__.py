@@ -10,14 +10,13 @@ from scipy.stats import chi2
 import mousestyles.data as data
 
 
-def aggegate_interval(strain, mouse, feature, bin_width):
+def aggregate_interval(strain, mouse, feature, bin_width):
     """
     Aggregate the interval data based on n-minute time
     intervals, return a time series.
 
     Parameters
-    ----------
-
+    ---------------
     strain: int
         nonnegative integer indicating the strain number
     mouse: int
@@ -26,8 +25,7 @@ def aggegate_interval(strain, mouse, feature, bin_width):
     bin_width: number of minutes of time interval for data aggregation
 
     Returns
-    -------
-
+    ----------
     ts: pandas.tseries
         a pandas time series of length 12(day)*24(hour)*60(minute)/n
     """
@@ -109,7 +107,7 @@ def aggregate_movement(strain, mouse, bin_width):
     time intervals, return a time series.
 
     Parameters
-    ----------
+    ---------------
     strain: int
         nonnegative integer indicating the strain number
     mouse: int
@@ -117,7 +115,7 @@ def aggregate_movement(strain, mouse, bin_width):
     bin_width: number of minutes of time interval for data aggregation
 
     Returns
-    -------
+    ----------
     ts: pandas.tseries
         a pandas time series of length (#day)*24(hour)*60(minute)/n
     """
@@ -165,34 +163,48 @@ def aggregate_movement(strain, mouse, bin_width):
 
 
 def aggregate_data(feature, bin_width):
-    """
-    Aggregate all the strains and mouses with any feature together
-    in one dataframe. It will return a dataframe
-    with three variables: mouse, strain, feature and hour.
+    """Aggregate all the strains and mouses with any feature together
+    in one dataframe.
+    
+    It combines the results you got from aggregate_movements and 
+    aggregate_interval. It will return a dataframe with three 
+    variables: mouse, strain, feature and hour.
 
-    Parameters:
+    Parameters
     -----------
-    feature: {"AS", "F", "IS", "M_AS", "M_IS", "W"}
-    bin_width: int
-        number of minutes, the time interval for data aggregation
+    feature :
+        {"AS", "F", "IS", "M_AS", "M_IS", "W"}
+    bin_width : int
+        Number of minutes, the time interval for data aggregation.
 
-    Returns:
-    -----------
-    Column 0: the mouse number (number depends on strain)(0-3)
-    Column 1: the strain of the mouse (0-2)
-    Column 2: hour(numeric values below 24 accourding to bin_width)
-    Column 3: feature values
+    Returns
+    -------
+    pandas.dataframe
+    describe :
+        Column 0: the mouse number (number depends on strain)(0-3)
+        Column 1: the strain of the mouse (0-2)
+        Column 2: hour(numeric values below 24 accourding to bin_width)
+        Column 3: feature values
 
-    Example:
-    -----------
-    test = aggregate_data("W",20)
-
+    Examples
+    --------
+    >>> test = aggregate_data("Distance",20)
+    >>> print(np.mean(test["Distance"]))
+    531.4500177747973
+    
     """
     init = pd.DataFrame(columns=["mouse", "strain", "hour", feature])
     for i in range(3):
         for j in range(4):
-            tmp = aggegate_interval(
-                strain=i, mouse=j, feature=feature, bin_width=bin_width)
+            if feature == "Distance":
+                tmp = aggregate_movement(strain = i, mouse = j,
+                                        bin_width = bin_width)
+            else:
+                tmp = aggregate_interval(strain = i,mouse = j,
+                                         feature = feature,
+                                         bin_width = bin_width)
+            tmp = pd.DataFrame(list(tmp.values), index=tmp.index)
+            tmp.columns = [feature]
             tmp["strain"] = i
             tmp["mouse"] = j
             tmp["hour"] = tmp.index.hour + tmp.index.minute / 60
@@ -232,7 +244,7 @@ def seasonal_decomposition(strain, mouse, feature, bin_width, period_length):
                                      bin_width=30, period_length = 24)
     """
     freq = int(period_length * 60 / bin_width)
-    ts = aggegate_interval(strain=strain, mouse=mouse,
+    ts = aggregate_interval(strain=strain, mouse=mouse,
                            feature=feature, bin_width=bin_width)
     res = sm.tsa.seasonal_decompose(ts.values, freq=freq, model="additive")
     return(res)
@@ -304,8 +316,8 @@ def mix_strain(data, feature):
         data: data frame output from aggregate_data function
         feature: {"AS", "F", "IS", "M_AS", "M_IS", "W"}
 
-    Returns:
-    ----------
+    Returns
+    -------
     Two mixed model regression results which includes all the coefficients,
     t statistics and p values for corresponding coefficients; The first model
     includes interaction terms while the second model does not include the
@@ -315,9 +327,12 @@ def mix_strain(data, feature):
     we can conclude that the different strains have significantly different
     time patterns
 
-    Example:
-    ----------
-    mix_strain(data = aggregate_data("W",20),"W")
+    Examples
+    --------
+    >>> result = mix_strain(data = aggregate_data("F",20), feature = "F",
+    >>>          print_opt = False)
+    >>> print(result)
+    1.4189770157713608e-05
 
     """
     b = pd.get_dummies(data["strain"])
