@@ -302,7 +302,7 @@ def mix_strain(data, feature):
     Parameters
     ----------
         data: data frame output from aggregate_data function
-        feature:{"AS", "F", "IS", "M_AS", "M_IS", "W"}
+        feature: {"AS", "F", "IS", "M_AS", "M_IS", "W"}
 
     Returns:
     ----------
