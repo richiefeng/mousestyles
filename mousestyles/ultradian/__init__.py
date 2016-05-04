@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
+import statsmodels.formula.api as smf
+from scipy.stats import chi2
 
 import mousestyles.data as data
 
@@ -162,6 +164,42 @@ def aggregate_movement(strain, mouse, bin_width):
     return(ts)
 
 
+def aggregate_data(feature, bin_width):
+    """
+    Aggregate all the strains and mouses with any feature together
+    in one dataframe. It will return a dataframe
+    with three variables: mouse, strain, feature and hour.
+
+    Parameters:
+    -----------
+    feature: {"AS", "F", "IS", "M_AS", "M_IS", "W"}
+    bin_width: int
+        number of minutes, the time interval for data aggregation
+
+    Returns:
+    -----------
+    Column 0: the mouse number (number depends on strain)(0-3)
+    Column 1: the strain of the mouse (0-2)
+    Column 2: hour(numeric values below 24 accourding to bin_width)
+    Column 3: feature values
+
+    Example:
+    -----------
+    test = aggregate_data("W",20)
+
+    """
+    init = pd.DataFrame(columns=["mouse", "strain", "hour", feature])
+    for i in range(3):
+        for j in range(4):
+            tmp = aggegate_interval(
+                strain=i, mouse=j, feature=feature, bin_width=bin_width)
+            tmp["strain"] = i
+            tmp["mouse"] = j
+            tmp["hour"] = tmp.index.hour + tmp.index.minute / 60
+            init = init.append(tmp)
+    return(init)
+
+
 def seasonal_decomposition(strain, mouse, feature, bin_width, period_length):
     """
     Apply seasonal decomposition model on the time series
@@ -251,3 +289,57 @@ def strain_seasonal(strain, mouse, feature, bin_width, period_length):
     plt.xlabel('Time')
     plt.ylabel('Seasonal Term')
     return seasonal_all, seasonal_plot
+
+
+def mix_strain(data, feature):
+    """
+    Fit the linear mixed model onto our aggregate data. The fixed effects
+    are the hour, strain, interactions between hour and strain; The random
+    effect is mouse because we want to make sure that the different mouses
+    will not give out any differences. We added two dummy variables:
+    strain0 and strain1 to be our fixed effects.
+
+    Parameters
+    ----------
+        data: data frame output from aggregate_data function
+        feature:{"AS", "F", "IS", "M_AS", "M_IS", "W"}
+
+    Returns:
+    ----------
+    Two mixed model regression results which includes all the coefficients,
+    t statistics and p values for corresponding coefficients; The first model
+    includes interaction terms while the second model does not include the
+    interaction terms
+
+    Likelihood ratio test p values, if it is below our significance level,
+    we can conclude that the different strains have significantly different
+    time patterns
+
+    Example:
+    ----------
+    mix_strain(data = aggregate_data("W",20),"W")
+
+    """
+    b = pd.get_dummies(data["strain"])
+    data["strain0"] = b.ix[:, 0]
+    data["strain1"] = b.ix[:, 1]
+    data["strain2"] = b.ix[:, 2]
+    data = data.drop('strain', 1)
+    names = data.columns.tolist()
+    names[names.index(feature)] = 'feature'
+    data.columns = names
+    print(data)
+    md1 = smf.mixedlm(
+        "feature ~ hour + strain0 +strain1 + strain0*hour+ strain1*hour",
+        data, groups=data["mouse"])
+    mdf1 = md1.fit()
+    like1 = mdf1.llf
+    print(mdf1.summary())
+    md2 = smf.mixedlm("feature ~ hour + strain0 +strain1",
+                      data, groups=data["mouse"])
+    mdf2 = md2.fit()
+    like2 = mdf2.llf
+    print(mdf1.summary())
+    fstat = like1 - like2
+    p_v = chi2.pdf(fstat, df=2)
+    return(p_v)
