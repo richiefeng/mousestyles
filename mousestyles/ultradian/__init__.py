@@ -75,25 +75,25 @@ def aggregate_interval(strain, mouse, feature, bin_width):
             ["strain", "mouse", "day", "hour", "Food", "Water"]].groupby(
             ["strain", "mouse", "day"]).sum()
         group = group.reset_index()
-        group['day'] -= 5
         mouse_data = group.loc[(group['strain'] == strain) &
-                               (group['mouse'] == mouse)]
+                               (group['mouse'] == mouse)].copy()
+        mouse_data.loc[:, 'day'] = np.arange(len(mouse_data))
         for i in mouse_data['day'].astype('int'):
             if feature == 'F':
                 food_amount = float(mouse_data['Food'][mouse_data['day'] == i])
                 time_behaviour[
-                    (bin_count * i):(bin_count * (i + 1) - 1)] /= sum(
-                    time_behaviour[(bin_count * i):(bin_count * (i + 1) - 1)])
+                    (bin_count * i):(bin_count * (i + 1))] /= sum(
+                    time_behaviour[(bin_count * i):(bin_count * (i + 1))])
                 time_behaviour[(bin_count * i):(bin_count *
-                                                (i + 1) - 1)] *= food_amount
+                                                (i + 1))] *= food_amount
             else:
                 food_amount = float(mouse_data['Water'][
                                     mouse_data['day'] == i])
                 time_behaviour[
-                    (bin_count * i):(bin_count * (i + 1) - 1)] /= sum(
-                    time_behaviour[(bin_count * i):(bin_count * (i + 1) - 1)])
+                    (bin_count * i):(bin_count * (i + 1))] /= sum(
+                    time_behaviour[(bin_count * i):(bin_count * (i + 1))])
                 time_behaviour[(bin_count * i):(bin_count *
-                                                (i + 1) - 1)] *= food_amount
+                                                (i + 1))] *= food_amount
 
     ts = pd.Series(time_behaviour, index=pd.date_range(
         '01/01/2014', periods=len(time_behaviour),
