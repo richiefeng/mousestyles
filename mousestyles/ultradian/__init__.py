@@ -21,7 +21,12 @@ def aggregate_interval(strain, mouse, feature, bin_width):
         nonnegative integer indicating the strain number
     mouse: int
         nonnegative integer indicating the mouse number
-    feature: {"AS", "F", "IS", "M_AS", "M_IS", "W", "AS_prob"}
+    feature: {"AS", "F", "M_AS", "M_IS", "W"}
+        "AS": Active state probalibity
+        "F": Food consumed (g)
+        "M_AS": Movement outside homebase
+        "M_IS": Movement inside homebase
+        "W": Water consumed (g)
     bin_width: number of minutes of time interval for data aggregation
 
     Returns
@@ -94,6 +99,8 @@ def aggregate_interval(strain, mouse, feature, bin_width):
                     time_behaviour[(bin_count * i):(bin_count * (i + 1))])
                 time_behaviour[(bin_count * i):(bin_count *
                                                 (i + 1))] *= food_amount
+    if feature == 'AS':
+        time_behaviour /= (bin_width * 60)
 
     ts = pd.Series(time_behaviour, index=pd.date_range(
         '01/01/2014', periods=len(time_behaviour),
@@ -221,7 +228,13 @@ def seasonal_decomposition(strain, mouse, feature, bin_width, period_length):
         nonnegative integer indicating the strain number
     mouse: int
         nonnegative integer indicating the mouse number
-    feature: {"AS", "F", "IS", "M_AS", "M_IS", "W"}
+    feature: {"AS", "F", "M_AS", "M_IS", "W", "Distance"}
+        "AS": Active state probalibity
+        "F": Food consumed (g)
+        "M_AS": Movement outside homebase
+        "M_IS": Movement inside homebase
+        "W": Water consumed (g)
+        "Distance": Distance traveled
     bin_width: int
         number of minutes, the time interval for data aggregation
     period_length: int
@@ -242,8 +255,12 @@ def seasonal_decomposition(strain, mouse, feature, bin_width, period_length):
                                      bin_width=30, period_length = 24)
     """
     freq = int(period_length * 60 / bin_width)
-    ts = aggregate_interval(strain=strain, mouse=mouse,
-                            feature=feature, bin_width=bin_width)
+    if feature == "Distance":
+        ts = aggregate_movement(strain=strain, mouse=mouse,
+                                bin_width=bin_width)
+    else:
+        ts = aggregate_interval(strain=strain, mouse=mouse,
+                                feature=feature, bin_width=bin_width)
     res = sm.tsa.seasonal_decompose(ts.values, freq=freq, model="additive")
     return(res)
 
@@ -261,7 +278,13 @@ def strain_seasonal(strain, mouse, feature, bin_width, period_length):
         nonnegative integer indicating the strain number
     mouse: list, set or tuple
         nonnegative integer indicating the mouse number
-    feature: {"AS", "F", "IS", "M_AS", "M_IS", "W"}
+    feature: {"AS", "F", "M_AS", "M_IS", "W", "Distance"}
+        "AS": Active state probalibity
+        "F": Food consumed (g)
+        "M_AS": Movement outside homebase
+        "M_IS": Movement inside homebase
+        "W": Water consumed (g)
+        "Distance": Distance traveled
     bin_width: int
         number of minutes, the time interval for data aggregation
     period_length: int
