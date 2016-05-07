@@ -9,7 +9,7 @@ from scipy.stats import chi2
 
 import mousestyles.data as data
 
-INTERVAL_FEATURES = ["AS", "F", "IS", "M_AS", "M_IS", "W"]
+INTERVAL_FEATURES = ["AS", "F", "M_AS", "M_IS", "W"]
 
 
 def aggregate_interval(strain, mouse, feature, bin_width):
@@ -46,7 +46,7 @@ def aggregate_interval(strain, mouse, feature, bin_width):
             'Mouse value must be a non-negative integer')
     if feature not in INTERVAL_FEATURES:
         raise ValueError(
-            'Input value must in {"AS", "F", "IS", "M_AS", "M_IS", "W"}')
+            'Input value must in {"AS", "F", "M_AS", "M_IS", "W"}')
     if (not isinstance(bin_width, int)) or bin_width < 0 or bin_width > 1440:
         raise ValueError(
             'Bin width (minutes) must be a non-negative integer below 1440')
@@ -226,6 +226,14 @@ def aggregate_data(feature, bin_width):
     >>> print(np.mean(test["Distance"]))
     531.4500177747973
     """
+
+    if feature not in INTERVAL_FEATURES:
+        raise ValueError(
+            'Input value must in {"AS", "F", "M_AS", "M_IS", "W"}')
+    if (not isinstance(bin_width, int)) or bin_width < 0 or bin_width > 1440:
+        raise ValueError(
+            'Bin width (minutes) must be a non-negative integer below 1440')
+
     init = pd.DataFrame(columns=["mouse", "strain", "hour", feature])
     for i in range(3):
         for j in range(4):
@@ -282,6 +290,23 @@ def seasonal_decomposition(strain, mouse, feature, bin_width, period_length):
     >>> res = seasonal_decomposition(strain=0, mouse=0, feature="W",
                                      bin_width=30, period_length = 24)
     """
+
+    if (not isinstance(strain, int)) or (strain < 0):
+        raise ValueError(
+            'Strain must be a non-negative integer')
+    if (not isinstance(mouse, int)) or (mouse < 0):
+        raise ValueError(
+            'Mouse value must be a non-negative integer')
+    if feature not in INTERVAL_FEATURES:
+        raise ValueError(
+            'Input value must in {"AS", "F", "M_AS", "M_IS", "W"}')
+    if (not isinstance(bin_width, int)) or bin_width < 0 or bin_width > 1440:
+        raise ValueError(
+            'Bin width (minutes) must be a non-negative integer below 1440')
+    if (not isinstance(period_length, int)) or period_length < 0:
+        raise ValueError(
+            'Peoriod length must be a non-negative integer')
+
     freq = int(period_length * 60 / bin_width)
     if feature == "Distance":
         ts = aggregate_movement(strain=strain, mouse=mouse,
@@ -330,6 +355,22 @@ def strain_seasonal(strain, mouse, feature, bin_width, period_length):
     >>> res = strain_seasonal(strain=0, mouse={0, 1, 2, 3}, feature="W",
                               bin_width=30, period_length = 24)
     """
+
+    if (not isinstance(strain, int)) or (strain < 0):
+        raise ValueError(
+            'Strain must be a non-negative integer')
+    if (not isinstance(mouse, int)) or (mouse < 0):
+        raise ValueError(
+            'Mouse value must be a non-negative integer')
+    if feature not in INTERVAL_FEATURES:
+        raise ValueError(
+            'Input value must in {"AS", "F", "M_AS", "M_IS", "W"}')
+    if (not isinstance(bin_width, int)) or bin_width < 0 or bin_width > 1440:
+        raise ValueError(
+            'Bin width (minutes) must be a non-negative integer below 1440')
+    if (not isinstance(period_length, int)) or period_length < 0:
+        raise ValueError(
+            'Peoriod length must be a non-negative integer')
     # seasonal decomposition
     seasonal_all = np.array([])
     freq = int(period_length * 60 / bin_width)
@@ -384,6 +425,12 @@ def mix_strain(data, feature):
     1.4189770157713608e-05
 
     """
+    if not isinstance(data, pd.DataFrame):
+        raise ValueError(
+            'Data must be a pandas data frame')
+    if feature not in INTERVAL_FEATURES:
+        raise ValueError(
+            'Input value must in {"AS", "F", "M_AS", "M_IS", "W"}')
     b = pd.get_dummies(data["strain"])
     data["strain0"] = b.ix[:, 0]
     data["strain1"] = b.ix[:, 1]
