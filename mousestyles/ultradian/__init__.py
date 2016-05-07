@@ -9,6 +9,8 @@ from scipy.stats import chi2
 
 import mousestyles.data as data
 
+INTERVAL_FEATURES = ["AS", "F", "IS", "M_AS", "M_IS", "W"]
+
 
 def aggregate_interval(strain, mouse, feature, bin_width):
     """
@@ -34,6 +36,21 @@ def aggregate_interval(strain, mouse, feature, bin_width):
     ts: pandas.tseries
         a pandas time series of length 12(day)*24(hour)*60(minute)/n
     """
+    # Input Check
+
+    if (not isinstance(strain, int)) or (strain < 0):
+        raise ValueError(
+            'Strain must be a non-negative integer')
+    if (not isinstance(mouse, int)) or (mouse < 0):
+        raise ValueError(
+            'Mouse value must be a non-negative integer')
+    if feature not in INTERVAL_FEATURES:
+        raise ValueError(
+            'Input value must in {"AS", "F", "IS", "M_AS", "M_IS", "W"}')
+    if (not isinstance(bin_width, int)) or bin_width < 0 or bin_width > 1440:
+        raise ValueError(
+            'Bin width (minutes) must be a non-negative integer below 1440')
+
     # load data
     intervals = data.load_intervals(feature)
     mouse_data = intervals.loc[
@@ -126,6 +143,17 @@ def aggregate_movement(strain, mouse, bin_width):
     ts: pandas.tseries
         a pandas time series of length (#day)*24(hour)*60(minute)/n
     """
+    # Input Check
+    if (not isinstance(strain, int)) or (strain < 0):
+        raise ValueError(
+            'Strain must be a non-negative integer')
+    if (not isinstance(mouse, int)) or (mouse < 0):
+        raise ValueError(
+            'Mouse value must be a non-negative integer')
+    if (not isinstance(bin_width, int)) or bin_width < 0 or bin_width > 1440:
+        raise ValueError(
+            'Bin width (minutes) must be a non-negative integer below 1440')
+
     # determine number of days
     intervals = data.load_intervals('IS')
     mouse_data = intervals.loc[
